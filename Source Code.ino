@@ -45,8 +45,8 @@ const uint16_t ORANGE   = 0xFD20;
 const uint16_t RED      = 0xF800;
 
 String question = "";
-String answer = "Xin chao! Cham phim va nhap cau hoi cua ban.";
-String statusLine = "San sang";
+String answer = "Hello! Tap the button and enter your question.";
+String statusLine = "ready";
 bool busy = false;
 unsigned long lastTouch = 0;
 
@@ -144,7 +144,7 @@ void redraw() {
   drawButton(5, 213, 48, 23, "SPACE", 0x3186);
   drawButton(57, 213, 48, 23, "DEL", 0xA145);
   drawButton(109, 213, 48, 23, "CLEAR", 0xA145);
-  drawButton(161, 213, 154, 23, busy ? "DANG TRA LOI..." : "GUI CAU HOI  >", 0x03E0, 0x0000);
+  drawButton(161, 213, 154, 23, busy ? "REPLYING..." : "SEND A QUESTION  >", 0x03E0, 0x0000);
 
   tft.fillRect(0, 238, 320, 2, BG);
 }
@@ -156,9 +156,9 @@ void showStatus(const String &s, uint16_t color = ORANGE) {
 }
 
 String demoAnswer(const String &q) {
-  if (q.length() == 0) return "Ban chua nhap cau hoi. Hay cham cac phim de nhap!";
-  return "DAY LA CHE DO DEMO. May da nhan cau hoi: \"" + q +
-         "\". Hay them Wi-Fi va API key vao Sketch.ino de nhan cau tra loi AI that.";
+  if (q.length() == 0) return "You haven't entered a question yet. Please tap the buttons to enter!";
+  return "THIS LACHED BY DEMO. Luckily, I asked: \"" + q +
+         "\". Or add Wi-Fi and API key to Sketch.ino to receive that AI query.";
 }
 
 String askAI(const String &q) {
@@ -174,7 +174,7 @@ String askAI(const String &q) {
     }
   }
   if (WiFi.status() != WL_CONNECTED) {
-    return "Khong ket noi duoc Wi-Fi. Hay kiem tra WIFI_SSID va WIFI_PASSWORD.";
+    return "Unable to connect to Wi-Fi. Please check WIFI_SSID and WIFI_PASSWORD.";
   }
 
   WiFiClientSecure client;
@@ -182,7 +182,7 @@ String askAI(const String &q) {
   HTTPClient http;
   http.setTimeout(25000);
   if (!http.begin(client, AI_ENDPOINT)) {
-    return "Khong mo duoc ket noi AI.";
+    return "Unable to establish AI connection.";
   }
   http.addHeader("Content-Type", "application/json");
   http.addHeader("Authorization", String("Bearer ") + API_KEY);
@@ -191,8 +191,8 @@ String askAI(const String &q) {
   doc["model"] = AI_MODEL;
   doc["messages"][0]["role"] = "system";
   doc["messages"][0]["content"] =
-      "Ban la tro ly AI than thien, tra loi bang tieng Viet, ro rang va huu ich. "
-      "Neu khong chac chan, hay noi ro dieu do.";
+      "You are a friendly AI assistant, responding clearly and helpfully in English. "
+      "If you're not sure, please state that clearly.";
   doc["messages"][1]["role"] = "user";
   doc["messages"][1]["content"] = q;
   doc["max_tokens"] = 220;
@@ -209,38 +209,38 @@ String askAI(const String &q) {
       if (!err) {
         result = response["choices"][0]["message"]["content"] | "";
       } else {
-        result = "AI da phan hoi nhung khong doc duoc du lieu JSON.";
+        result = "The AI responded but couldn't read the JSON data.";
       }
     } else {
       Serial.println(payload);
-      result = "Loi API HTTP " + String(code) +
-               ". Kiem tra API key, han muc va ten model trong Serial Monitor.";
+      result = "Error API HTTP " + String(code) +
+               ". Check the API key, limit, and model name in Serial Monitor..";
     }
   } else {
-    result = "Loi ket noi: " + http.errorToString(code);
+    result = "Error Connect: " + http.errorToString(code);
   }
   http.end();
   result.replace("\r", " ");
   result.replace("\n", " ");
-  if (result.length() == 0) result = "AI khong gui ve noi dung tra loi.";
+  if (result.length() == 0) result = "The AI did not send back the reply.";
   return result;
 }
 
 void sendQuestion() {
   if (busy) return;
   if (question.length() == 0) {
-    answer = "Hay nhap cau hoi truoc khi bam GUI.";
+    answer = "Please enter your question before clicking Send.";
     redraw();
     return;
   }
   busy = true;
-  answer = "Dang ket noi AI... Vui long cho.";
+  answer = "Connecting to AI... Please wait.";
   redraw();
-  showStatus("Dang gui cau hoi");
+  showStatus("Submitting a question");
   answer = askAI(question);
   busy = false;
   redraw();
-  showStatus("Da nhan phan hoi", GREEN);
+  showStatus("Received feedback", GREEN);
 }
 
 void handleKey(int x, int y) {
@@ -259,7 +259,7 @@ void handleKey(int x, int y) {
       if (question.length()) question.remove(question.length() - 1);
     } else if (x < 159) {
       question = "";
-      answer = "Da xoa. Hay nhap cau hoi moi!";
+      answer = "Deleted. Please enter a new question!";
     } else {
       sendQuestion();
       return;
@@ -280,8 +280,8 @@ void setup() {
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  showStatus("UI san sang - nhap cau hoi", GREEN);
-  Serial.println("WOKWI AI ANSWER MACHINE");
+  showStatus("UI ready - enter questions", GREEN);
+  Serial.println("AI ANSWER MACHINE");
   Serial.println("Touch the virtual screen to type. API key is optional for UI demo.");
 }
 
